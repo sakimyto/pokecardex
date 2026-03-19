@@ -27,3 +27,12 @@ primary_region = "nrt"
 [mounts]
   source = "pokecardex_data"
   destination = "/app/data"
+
+[checks]
+  [checks.health]
+    type = "http"
+    port = 8080
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "10s"

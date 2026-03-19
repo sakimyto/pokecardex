@@ -12,10 +12,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json bun.lock ./
 COPY src ./src
 COPY drizzle ./drizzle
+COPY scripts ./scripts
 COPY drizzle.config.ts ./
 COPY tsconfig.json ./
 
-# Create data directory for SQLite
+# Create data directory for SQLite (volume mount target)
 RUN mkdir -p data
 
 ENV NODE_ENV=production
@@ -23,4 +24,4 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["sh", "scripts/start.sh"]
