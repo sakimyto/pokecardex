@@ -45,6 +45,7 @@ pages.get('/', (c) => {
       title: 'Home',
       description:
         'PokeCardex: Japanese Pokemon TCG card database with EN translations, JP/EN price comparison, and translated news.',
+      path: '/',
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'WebSite',
@@ -91,6 +92,7 @@ pages.get('/sets', async (c) => {
       title: 'Card Sets',
       description:
         'Browse all Japanese Pokemon TCG card sets with English translations, release dates, and card counts.',
+      path: '/sets',
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -160,6 +162,7 @@ pages.get('/sets/:id', async (c) => {
     {
       title: setTitle,
       description: `${set.nameJa} (${set.codeJa}) - ${set.totalCards ?? '?'} cards. Japanese Pokemon TCG set with English translations.`,
+      path: `/sets/${set.id}`,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -284,6 +287,7 @@ pages.get('/cards/:id', async (c) => {
     {
       title: cardTitle,
       description: `${card.nameJa} (${card.nameEn ?? ''}) - ${card.numberInSet} from ${set?.nameJa ?? card.setId}. Rarity: ${card.rarity ?? 'N/A'}.`,
+      path: `/cards/${card.id}`,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -348,6 +352,7 @@ pages.get('/search', async (c) => {
     {
       title: 'Search Cards',
       description: 'Search Japanese Pokemon TCG cards by name in Japanese or English.',
+      path: '/search',
     },
   )
   return c.html(body)
@@ -396,6 +401,7 @@ pages.get('/prices', async (c) => {
       title: 'Price Tracker',
       description:
         'Compare Japanese and English Pokemon TCG card prices. Find arbitrage opportunities across Mercari, Yahoo Auctions, TCGPlayer, and eBay.',
+      path: '/prices',
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'WebPage',
@@ -448,6 +454,7 @@ pages.get('/news', async (c) => {
       title: 'News',
       description:
         'Latest Japanese Pokemon TCG news translated to English. Set announcements, tournament results, and more.',
+      path: '/news',
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -510,6 +517,7 @@ pages.get('/news/:id', async (c) => {
     {
       title,
       description: (article.bodyEn ?? article.bodyJa).slice(0, 160),
+      path: `/news/${article.id}`,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'NewsArticle',
