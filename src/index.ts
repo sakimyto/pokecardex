@@ -1,14 +1,10 @@
-const server = Bun.serve({
-  port: Number(process.env.PORT) || 3000,
-  fetch(req) {
-    const url = new URL(req.url)
+import { app } from '~/app.ts'
 
-    if (url.pathname === '/health') {
-      return Response.json({ status: 'ok', timestamp: new Date().toISOString() })
-    }
+const port = Number(process.env.PORT) || 3000
 
-    return Response.json({ message: 'pokecardex' })
-  },
-})
+export default {
+  port,
+  fetch: app.fetch,
+}
 
-console.log(`Server running at http://localhost:${server.port}`)
+console.log(`Server running at http://localhost:${port}`)
