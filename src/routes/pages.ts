@@ -383,8 +383,9 @@ pages.get('/search', async (c) => {
     'Search Cards',
     `
     <h2>Search Cards</h2>
-    <form class="search-form" method="get" action="/search">
-      <input type="text" name="q" value="${escapeHtml(q)}" placeholder="Search by name (JP or EN)..." autofocus>
+    <form class="search-form" method="get" action="/search" role="search" aria-label="Card search">
+      <label for="search-input" class="sr-only">Search by card name</label>
+      <input id="search-input" type="search" name="q" value="${escapeHtml(q)}" placeholder="Search by name (JP or EN) / \u540d\u524d\u3067\u691c\u7d22..." autofocus>
       <button type="submit">Search</button>
     </form>
     ${resultHtml}
