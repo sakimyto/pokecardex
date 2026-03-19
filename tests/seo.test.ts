@@ -76,6 +76,15 @@ describe('SEO routes', () => {
     expect(body).toContain('Trading Card')
   })
 
+  test('Card detail page has OG image from card image', async () => {
+    const res = await app.request('/cards/sv6pt5-1')
+    const body = await res.text()
+
+    expect(body).toContain('og:image')
+    expect(body).toContain('twitter:image')
+    expect(body).toContain('summary_large_image')
+  })
+
   test('Pages have OG meta tags', async () => {
     const res = await app.request('/')
     const body = await res.text()

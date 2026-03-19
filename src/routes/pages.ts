@@ -396,12 +396,14 @@ pages.get('/cards/:id', async (c) => {
       title: cardTitle,
       description: `${card.nameJa} (${card.nameEn ?? ''}) - ${card.numberInSet} from ${set?.nameJa ?? card.setId}. Rarity: ${card.rarity ?? 'N/A'}.`,
       path: `/cards/${card.id}`,
+      image: card.imageUrlEn ?? undefined,
       jsonLd: [
         {
           '@context': 'https://schema.org',
           '@type': 'Product',
           name: cardTitle,
           description: `Pokemon TCG card: ${card.nameJa}`,
+          ...(card.imageUrlEn ? { image: card.imageUrlEn } : {}),
           category: 'Trading Card',
           brand: { '@type': 'Brand', name: 'Pokemon TCG' },
         },

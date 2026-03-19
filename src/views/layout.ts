@@ -2,6 +2,7 @@ interface SeoMeta {
   title: string
   description?: string
   path?: string
+  image?: string
   jsonLd?: Record<string, unknown> | Record<string, unknown>[]
 }
 
@@ -31,9 +32,11 @@ export function layout(title: string, content: string, seo?: SeoMeta): string {
   <meta property="og:type" content="website">
   <meta property="og:url" content="${canonicalUrl}">
   <meta property="og:site_name" content="PokeCardex">
-  <meta name="twitter:card" content="summary">
+  ${seo?.image ? `<meta property="og:image" content="${escapeHtml(seo.image)}">` : ''}
+  <meta name="twitter:card" content="${seo?.image ? 'summary_large_image' : 'summary'}">
   <meta name="twitter:title" content="${pageTitle}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
+  ${seo?.image ? `<meta name="twitter:image" content="${escapeHtml(seo.image)}">` : ''}
   <link rel="canonical" href="${canonicalUrl}">
   ${jsonLdScript}
   <style>
