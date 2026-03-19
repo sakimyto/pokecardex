@@ -174,7 +174,20 @@ pages.get('/sets/:id', async (c) => {
   }
 
   const set = setResult[0]
-  const setCards = await db.select().from(cards).where(eq(cards.setId, setId))
+  const page = Math.max(1, Number(c.req.query('page')) || 1)
+  const perPage = 60
+
+  const [countResult, setCards] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(cards).where(eq(cards.setId, setId)),
+    db
+      .select()
+      .from(cards)
+      .where(eq(cards.setId, setId))
+      .limit(perPage)
+      .offset((page - 1) * perPage),
+  ])
+  const totalCards = countResult[0].count
+  const totalPages = Math.ceil(totalCards / perPage)
 
   const cardGrid =
     setCards.length === 0
@@ -198,6 +211,29 @@ pages.get('/sets/:id', async (c) => {
           )
           .join('')
 
+  const pagination =
+    totalPages > 1
+      ? `<nav class="pagination" aria-label="Set cards pages" style="margin-top:var(--space-lg);display:flex;gap:var(--space-sm);justify-content:center;flex-wrap:wrap;">
+          ${page > 1 ? `<a href="/sets/${escapeHtml(setId)}?page=${page - 1}">&laquo; Prev</a>` : ''}
+          ${Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+            let p: number
+            if (totalPages <= 10) {
+              p = i + 1
+            } else if (page <= 5) {
+              p = i + 1
+            } else if (page >= totalPages - 4) {
+              p = totalPages - 9 + i
+            } else {
+              p = page - 4 + i
+            }
+            return p === page
+              ? `<strong style="padding:var(--space-xs) var(--space-sm);">${p}</strong>`
+              : `<a href="/sets/${escapeHtml(setId)}?page=${p}" style="padding:var(--space-xs) var(--space-sm);">${p}</a>`
+          }).join('')}
+          ${page < totalPages ? `<a href="/sets/${escapeHtml(setId)}?page=${page + 1}">Next &raquo;</a>` : ''}
+        </nav>`
+      : ''
+
   const setTitle = `${set.nameJa}${set.nameEn ? ` / ${set.nameEn}` : ''}`
 
   const body = layout(
@@ -212,10 +248,11 @@ pages.get('/sets/:id', async (c) => {
       ${set.releaseDateJa ? `<tr><th>JP Release</th><td>${escapeHtml(set.releaseDateJa)}</td></tr>` : ''}
       ${set.releaseDateEn ? `<tr><th>EN Release</th><td>${escapeHtml(set.releaseDateEn)}</td></tr>` : ''}
     </table>
-    <h3 style="margin-top:2rem;">Cards (${setCards.length} indexed)</h3>
+    <h3 style="margin-top:2rem;">Cards (${totalCards} indexed${totalPages > 1 ? `, page ${page}/${totalPages}` : ''})</h3>
     <div class="card-grid">
       ${cardGrid}
     </div>
+    ${pagination}
     `,
     {
       title: setTitle,

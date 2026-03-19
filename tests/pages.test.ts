@@ -52,7 +52,25 @@ describe('Page routes - content', () => {
     expect(res.status).toBe(200)
     expect(body).toContain('card-grid')
     expect(body).toContain('Cards (')
-    expect(body).toContain('indexed)')
+    expect(body).toContain('indexed')
+  })
+
+  test('Set detail page paginates large sets', async () => {
+    const res = await app.request('/sets/base1')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('page 1/')
+    expect(body).toContain('Next &raquo;')
+  })
+
+  test('Set detail page supports page param', async () => {
+    const res = await app.request('/sets/base1?page=2')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('page 2/')
+    expect(body).toContain('&laquo; Prev')
   })
 
   test('Set detail page shows breadcrumb', async () => {
