@@ -82,20 +82,57 @@ pages.get('/', (c) => {
 
 pages.get('/sets', async (c) => {
   const allSets = await db.select().from(sets)
+
+  // Count cards per set
+  const cardCounts = await db
+    .select({ setId: cards.setId, count: sql<number>`count(*)` })
+    .from(cards)
+    .groupBy(cards.setId)
+  const countMap = new Map(cardCounts.map((r) => [r.setId, r.count]))
+
+  // Group sets by series, sorted by release date (newest first)
+  const sortedSets = [...allSets].sort((a, b) => {
+    const dateA = a.releaseDateJa ?? a.releaseDateEn ?? ''
+    const dateB = b.releaseDateJa ?? b.releaseDateEn ?? ''
+    return dateB.localeCompare(dateA)
+  })
+
+  const seriesGroups = new Map<string, typeof allSets>()
+  for (const s of sortedSets) {
+    const series = s.seriesJa || s.seriesEn || 'Other'
+    const group = seriesGroups.get(series)
+    if (group) {
+      group.push(s)
+    } else {
+      seriesGroups.set(series, [s])
+    }
+  }
+
   const setList =
     allSets.length === 0
       ? '<p>No sets indexed yet. Data will appear once scraping begins.</p>'
-      : allSets
+      : Array.from(seriesGroups.entries())
           .map(
-            (s) => `
-      <a href="/sets/${escapeHtml(s.id)}" style="text-decoration:none;color:inherit;">
-        <div class="set-card" style="cursor:pointer;">
-          ${s.imageUrl ? `<img class="set-logo" src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.nameEn ?? s.nameJa)}" loading="lazy">` : ''}
-          <h3>${escapeHtml(s.nameJa)}${s.nameEn ? ` / ${escapeHtml(s.nameEn)}` : ''}</h3>
-          <p class="meta">${escapeHtml(s.codeJa)} &middot; ${s.totalCards ?? '?'} cards</p>
-          ${s.releaseDateJa ? `<p class="meta">JP: ${escapeHtml(s.releaseDateJa)}${s.releaseDateEn ? ` / EN: ${escapeHtml(s.releaseDateEn)}` : ''}</p>` : ''}
+            ([series, groupSets]) => `
+      <div style="margin-bottom:2rem;">
+        <h3 style="margin-bottom:var(--space-md);padding-bottom:var(--space-xs);border-bottom:2px solid var(--color-border);">${escapeHtml(series)}</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;">
+          ${groupSets
+            .map(
+              (s) => `
+            <a href="/sets/${escapeHtml(s.id)}" style="text-decoration:none;color:inherit;">
+              <div class="set-card" style="cursor:pointer;">
+                ${s.imageUrl ? `<img class="set-logo" src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.nameEn ?? s.nameJa)}" loading="lazy">` : ''}
+                <h3>${escapeHtml(s.nameJa)}${s.nameEn ? ` / ${escapeHtml(s.nameEn)}` : ''}</h3>
+                <p class="meta">${escapeHtml(s.codeJa)} &middot; ${countMap.get(s.id) ?? 0}/${s.totalCards ?? '?'} cards indexed</p>
+                ${s.releaseDateJa ? `<p class="meta">JP: ${escapeHtml(s.releaseDateJa)}${s.releaseDateEn ? ` / EN: ${escapeHtml(s.releaseDateEn)}` : ''}</p>` : ''}
+              </div>
+            </a>
+          `,
+            )
+            .join('')}
         </div>
-      </a>
+      </div>
     `,
           )
           .join('')
@@ -104,8 +141,8 @@ pages.get('/sets', async (c) => {
     'Sets',
     `
     <h2>Card Sets</h2>
-    <p>Browse Japanese Pokemon TCG sets with English translations.</p>
-    <div style="margin-top:1.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;">
+    <p>Browse Japanese Pokemon TCG sets with English translations. ${allSets.length} sets across ${seriesGroups.size} series.</p>
+    <div style="margin-top:1.5rem;">
       ${setList}
     </div>
     `,
@@ -217,9 +254,25 @@ pages.get('/cards/:id', async (c) => {
   const setResult = await db.select().from(sets).where(eq(sets.id, card.setId))
   const set = setResult[0]
 
-  const [priceSummary, recentPrices] = await Promise.all([
+  const [priceSummary, recentPrices, relatedCards] = await Promise.all([
     getCardPriceSummary(card.id),
     getRecentPrices(card.id),
+    // Find other versions of the same Pokemon across sets
+    db
+      .select()
+      .from(cards)
+      .where(
+        and(
+          or(
+            card.nameEn
+              ? like(cards.nameEn, `${card.nameEn.split(' ')[0]}%`)
+              : like(cards.nameJa, `${card.nameJa.charAt(0)}%`),
+            like(cards.nameJa, `${card.nameJa.replace(/ ex| V| VSTAR| VMAX| GX| EX/g, '')}%`),
+          ),
+          sql`${cards.id} != ${card.id}`,
+        ),
+      )
+      .limit(12),
   ])
 
   const cardTitle = `${card.nameJa}${card.nameEn ? ` / ${card.nameEn}` : ''}`
@@ -312,6 +365,32 @@ pages.get('/cards/:id', async (c) => {
       </div>
     </div>
     ${priceSection}
+    ${
+      relatedCards.length > 0
+        ? `<div style="margin-top:2rem;">
+        <h3>Related Cards</h3>
+        <div class="card-grid" style="margin-top:var(--space-md);">
+          ${relatedCards
+            .map(
+              (rc) => `
+            <a href="/cards/${escapeHtml(rc.id)}" style="text-decoration:none;color:inherit;">
+              <div class="card-item">
+                ${cardImage(rc)}
+                <h4>${escapeHtml(rc.nameJa)}</h4>
+                ${rc.nameEn && rc.nameEn !== rc.nameJa ? `<p class="meta">${escapeHtml(rc.nameEn)}</p>` : ''}
+                <p class="meta">
+                  ${escapeHtml(rc.numberInSet)}
+                  ${rarityBadge(rc.rarity)}
+                </p>
+              </div>
+            </a>
+          `,
+            )
+            .join('')}
+        </div>
+      </div>`
+        : ''
+    }
     `,
     {
       title: cardTitle,

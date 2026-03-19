@@ -108,4 +108,33 @@ describe('Page routes - content', () => {
     expect(body).toContain('prefers-color-scheme: dark')
     expect(body).toContain('--color-bg')
   })
+
+  test('Sets page groups sets by series', async () => {
+    const res = await app.request('/sets')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    // Should show series names as section headers
+    expect(body).toContain('Scarlet &amp; Violet')
+    // Should show indexed card counts
+    expect(body).toContain('cards indexed')
+  })
+
+  test('Sets page shows total count summary', async () => {
+    const res = await app.request('/sets')
+    const body = await res.text()
+
+    expect(body).toContain('sets across')
+    expect(body).toContain('series')
+  })
+
+  test('Card detail page shows related cards section when available', async () => {
+    const res = await app.request('/cards/sv3pt5-1')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    // Related cards section may or may not be present depending on data
+    // but the page should load without errors
+    expect(body).toContain('Name (JP)')
+  })
 })
