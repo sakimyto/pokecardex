@@ -1,7 +1,7 @@
-import { eq, like, or } from 'drizzle-orm'
+import { desc, eq, like, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '~/db/index.ts'
-import { cards, sets } from '~/db/schema.ts'
+import { cards, newsArticles, sets } from '~/db/schema.ts'
 import {
   formatPrice,
   getActiveArbitrageAlerts,
@@ -401,6 +401,121 @@ pages.get('/prices', async (c) => {
         '@type': 'WebPage',
         name: 'Pokemon TCG Price Tracker',
         description: 'JP vs EN price comparison for Pokemon TCG cards',
+      },
+    },
+  )
+  return c.html(body)
+})
+
+pages.get('/news', async (c) => {
+  const articles = await db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt))
+
+  const articleList =
+    articles.length === 0
+      ? '<p>No news articles yet. Check back soon for the latest JP Pokemon TCG news translated to English.</p>'
+      : articles
+          .map(
+            (a) => `
+        <a href="/news/${a.id}" style="text-decoration:none;color:inherit;">
+          <div class="set-card" style="margin-bottom:1rem;cursor:pointer;">
+            <h3>${escapeHtml(a.titleEn ?? a.titleJa)}</h3>
+            <p class="meta" style="margin-bottom:0.5rem;">
+              ${escapeHtml(a.titleJa)}
+            </p>
+            <p class="meta">
+              ${new Date(a.publishedAt).toLocaleDateString()} &middot; ${escapeHtml(a.sourceName)}
+              ${a.translatedAt ? ' &middot; Translated' : ''}
+            </p>
+            <p style="margin-top:0.5rem;color:#555;">
+              ${escapeHtml((a.bodyEn ?? a.bodyJa).slice(0, 200))}${(a.bodyEn ?? a.bodyJa).length > 200 ? '...' : ''}
+            </p>
+          </div>
+        </a>
+      `,
+          )
+          .join('')
+
+  const body = layout(
+    'News',
+    `
+    <h2>JP Pokemon TCG News</h2>
+    <p>Latest Japanese Pokemon TCG news, translated to English by AI.</p>
+    <div style="margin-top:1.5rem;">
+      ${articleList}
+    </div>
+    `,
+    {
+      title: 'News',
+      description:
+        'Latest Japanese Pokemon TCG news translated to English. Set announcements, tournament results, and more.',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: 'Pokemon TCG News',
+        description: 'Japanese Pokemon TCG news translated to English',
+        numberOfItems: articles.length,
+      },
+    },
+  )
+  return c.html(body)
+})
+
+pages.get('/news/:id', async (c) => {
+  const id = Number(c.req.param('id'))
+  if (Number.isNaN(id)) {
+    return c.html(
+      layout(
+        'Not Found',
+        '<h2>Article not found</h2><p><a href="/news">&larr; Back to news</a></p>',
+      ),
+      404,
+    )
+  }
+
+  const result = await db.select().from(newsArticles).where(eq(newsArticles.id, id))
+  if (result.length === 0) {
+    return c.html(
+      layout(
+        'Not Found',
+        '<h2>Article not found</h2><p><a href="/news">&larr; Back to news</a></p>',
+      ),
+      404,
+    )
+  }
+
+  const article = result[0]
+  const title = article.titleEn ?? article.titleJa
+
+  const body = layout(
+    title,
+    `
+    <div class="breadcrumb"><a href="/news">News</a> &rsaquo; ${escapeHtml(title)}</div>
+    <article>
+      <h2>${escapeHtml(title)}</h2>
+      <p class="meta" style="margin-bottom:0.5rem;">${escapeHtml(article.titleJa)}</p>
+      <p class="meta" style="margin-bottom:1.5rem;">
+        ${new Date(article.publishedAt).toLocaleDateString()} &middot; ${escapeHtml(article.sourceName)}
+        ${article.translationModel ? ` &middot; Translated by ${escapeHtml(article.translationModel)}` : ''}
+      </p>
+      <div class="set-card">
+        <h3>English</h3>
+        <p style="line-height:1.8;margin-top:0.5rem;">${escapeHtml(article.bodyEn ?? 'Translation pending...')}</p>
+      </div>
+      <div class="set-card" style="margin-top:1rem;">
+        <h3>Japanese (Original)</h3>
+        <p style="line-height:1.8;margin-top:0.5rem;">${escapeHtml(article.bodyJa)}</p>
+      </div>
+    </article>
+    `,
+    {
+      title,
+      description: (article.bodyEn ?? article.bodyJa).slice(0, 160),
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'NewsArticle',
+        headline: title,
+        datePublished: article.publishedAt,
+        publisher: { '@type': 'Organization', name: article.sourceName },
       },
     },
   )

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createDb } from './index.ts'
-import { arbitrageAlerts, cards, priceStats, prices, sets } from './schema.ts'
+import { arbitrageAlerts, cards, newsArticles, priceStats, prices, sets } from './schema.ts'
 
 const db = createDb()
 
@@ -902,6 +902,90 @@ async function seed() {
     console.log(`  + ${seedAlerts.length} arbitrage alerts seeded`)
   } else {
     console.log(`  = Arbitrage alerts already seeded (${existingAlerts.length} records)`)
+  }
+
+  // Seed news articles
+  const seedNews = [
+    {
+      sourceUrl: 'https://www.pokemon-card.com/info/2025/20250310.html',
+      sourceName: 'pokemon-card.com',
+      titleJa: '拡張パック「超電ブレイカー」の新カードが公開！',
+      titleEn: 'New cards revealed for expansion pack "Super Electric Breaker"!',
+      bodyJa:
+        'ポケモンカードゲーム スカーレット＆バイオレット 拡張パック「超電ブレイカー」に収録される新カードが公開されました。ミライドンexやガブリアスexなど、強力なポケモンexが多数登場します。発売日は2025年1月24日です。',
+      bodyEn:
+        'New cards for the Pokemon TCG Scarlet & Violet expansion pack "Super Electric Breaker" have been revealed. Powerful Pokemon ex including Miraidon ex and Garchomp ex will make their debut. The release date is January 24, 2025.',
+      thumbnailUrl: null,
+      publishedAt: '2025-01-10T09:00:00Z',
+      translatedAt: daysAgo(now, 1),
+      translationModel: 'claude-sonnet-4-5-20250514',
+    },
+    {
+      sourceUrl: 'https://www.pokemon-card.com/info/2025/20250220.html',
+      sourceName: 'pokemon-card.com',
+      titleJa: 'チャンピオンズリーグ2025 横浜大会 結果発表',
+      titleEn: 'Champions League 2025 Yokohama Tournament Results',
+      bodyJa:
+        'チャンピオンズリーグ2025 横浜大会が開催されました。マスターリーグ優勝は「リザードンex」デッキを使用した選手でした。上位入賞デッキの多くがステラミラクルの新カードを採用しており、環境の変化が見られます。',
+      bodyEn:
+        'The Champions League 2025 Yokohama Tournament has concluded. The Masters League was won by a player using a "Charizard ex" deck. Many top-performing decks incorporated new cards from Stellar Miracle, showing a shift in the competitive meta.',
+      thumbnailUrl: null,
+      publishedAt: '2025-02-20T15:00:00Z',
+      translatedAt: daysAgo(now, 0),
+      translationModel: 'claude-sonnet-4-5-20250514',
+    },
+    {
+      sourceUrl: 'https://www.pokemon-card.com/info/2025/20250305.html',
+      sourceName: 'pokemon-card.com',
+      titleJa: 'ポケモンカード151 再販決定！3月下旬に追加生産分が出荷',
+      titleEn: 'Pokemon Card 151 reprint confirmed! Additional production shipping late March',
+      bodyJa:
+        '大人気の「ポケモンカード151」の再販が決定しました。2025年3月下旬より追加生産分が順次出荷されます。初回販売時に入手できなかった方は、お近くのポケモンセンターやカードショップをチェックしてください。',
+      bodyEn:
+        'The hugely popular "Pokemon Card 151" reprint has been confirmed. Additional production will begin shipping from late March 2025. If you missed the initial release, check your local Pokemon Center or card shops.',
+      thumbnailUrl: null,
+      publishedAt: '2025-03-05T10:00:00Z',
+      translatedAt: daysAgo(now, 0),
+      translationModel: 'claude-sonnet-4-5-20250514',
+    },
+    {
+      sourceUrl: 'https://www.pokemon-card.com/info/2025/20250312.html',
+      sourceName: 'pokemon-card.com',
+      titleJa: '新プロモカード「ピカチュウ」がポケモンセンターで配布開始',
+      titleEn: 'New promo card "Pikachu" distribution begins at Pokemon Centers',
+      bodyJa:
+        '2025年3月15日より、全国のポケモンセンターにて新プロモカード「ピカチュウ」の配布が開始されます。ポケモンカードゲーム関連商品を税込1,000円以上ご購入の方に、数量限定でプレゼントいたします。',
+      bodyEn:
+        'Starting March 15, 2025, a new promo "Pikachu" card will be distributed at Pokemon Centers nationwide. The card will be given as a limited-quantity gift to customers who purchase Pokemon TCG products totaling ¥1,000 or more (tax included).',
+      thumbnailUrl: null,
+      publishedAt: '2025-03-12T08:00:00Z',
+      translatedAt: daysAgo(now, 0),
+      translationModel: 'claude-sonnet-4-5-20250514',
+    },
+    {
+      sourceUrl: 'https://www.pokemon-card.com/info/2025/20250318.html',
+      sourceName: 'pokemon-card.com',
+      titleJa: '次期拡張パック「テラスタルオリジン」4月発売決定',
+      titleEn: 'Next expansion pack "Terastal Origin" confirmed for April release',
+      bodyJa:
+        'スカーレット＆バイオレットシリーズの次期拡張パック「テラスタルオリジン」が2025年4月18日に発売されることが発表されました。テラスタルの起源に迫る新たなカードが登場予定です。パッケージにはテラスタルしたリザードンが描かれています。',
+      bodyEn:
+        'The next Scarlet & Violet series expansion pack "Terastal Origin" has been announced for release on April 18, 2025. New cards exploring the origins of the Terastal phenomenon are planned. The packaging features a Terastallized Charizard.',
+      thumbnailUrl: null,
+      publishedAt: '2025-03-18T09:00:00Z',
+      translatedAt: daysAgo(now, 0),
+      translationModel: 'claude-sonnet-4-5-20250514',
+    },
+  ]
+
+  const existingNews = await db.select().from(newsArticles)
+  if (existingNews.length === 0) {
+    for (const article of seedNews) {
+      await db.insert(newsArticles).values(article)
+    }
+    console.log(`  + ${seedNews.length} news articles seeded`)
+  } else {
+    console.log(`  = News already seeded (${existingNews.length} articles)`)
   }
 
   console.log('Seeding complete.')

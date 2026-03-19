@@ -182,4 +182,50 @@ describe('SSR pages', () => {
     expect(body.length).toBeGreaterThan(0)
     expect(body[0].spreadPercent).toBeGreaterThan(0)
   })
+
+  test('GET /news shows news list page', async () => {
+    const res = await app.request('/news')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/html')
+    expect(body).toContain('JP Pokemon TCG News')
+    expect(body).toContain('Terastal Origin')
+    expect(body).toContain('pokemon-card.com')
+  })
+
+  test('GET /news/:id shows article detail', async () => {
+    const res = await app.request('/news/1')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('Super Electric Breaker')
+    expect(body).toContain('English')
+    expect(body).toContain('Japanese (Original)')
+    expect(body).toContain('application/ld+json')
+  })
+
+  test('GET /news/:id returns 404 for unknown article', async () => {
+    const res = await app.request('/news/99999')
+    expect(res.status).toBe(404)
+  })
+
+  test('GET /api/news returns articles array with seed data', async () => {
+    const res = await app.request('/api/news')
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBeGreaterThan(0)
+    expect(body[0].titleEn).toBeDefined()
+    expect(body[0].bodyEn).toBeDefined()
+  })
+
+  test('GET /api/news/:id returns single article', async () => {
+    const res = await app.request('/api/news/1')
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sourceName).toBe('pokemon-card.com')
+  })
 })
