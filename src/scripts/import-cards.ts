@@ -20,7 +20,7 @@ import { cards, sets } from '../db/schema.ts'
 
 const API_BASE = 'https://api.pokemontcg.io/v2'
 const PAGE_SIZE = 250
-const REQUEST_DELAY_MS = 500 // be polite to the API
+const REQUEST_DELAY_MS = 2000 // be polite to the API — increased due to frequent 504s
 
 interface ApiSet {
   id: string
@@ -49,20 +49,38 @@ interface ApiCard {
   }
 }
 
-async function fetchJson<T>(url: string, retries = 5): Promise<T> {
+async function fetchJson<T>(url: string, retries = 8): Promise<T> {
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'pokecardex/0.1' },
-    })
-    if (res.ok) {
-      return res.json() as Promise<T>
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30000)
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'pokecardex/0.1' },
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      if (res.ok) {
+        return res.json() as Promise<T>
+      }
+      if (res.status >= 500 && attempt < retries) {
+        const delay = 5000 * attempt
+        console.log(
+          `  Retry ${attempt}/${retries} after ${res.status} (waiting ${delay / 1000}s)...`,
+        )
+        await sleep(delay)
+        continue
+      }
+      throw new Error(`API error ${res.status}`)
+    } catch (err) {
+      clearTimeout(timeout)
+      if (attempt < retries) {
+        const delay = 5000 * attempt
+        console.log(`  Retry ${attempt}/${retries} after error (waiting ${delay / 1000}s)...`)
+        await sleep(delay)
+        continue
+      }
+      throw err
     }
-    if (res.status >= 500 && attempt < retries) {
-      console.log(`  Retry ${attempt}/${retries} after ${res.status}...`)
-      await sleep(2000 * attempt)
-      continue
-    }
-    throw new Error(`API error ${res.status}`)
   }
   throw new Error('Max retries exceeded')
 }
@@ -78,7 +96,22 @@ function normalizeNumber(num: string, total: number): string {
   return `${padded}/${totalPadded}`
 }
 
-/** Look up JP name for a Pokemon. Handles "ex", "V", etc. suffixes */
+// Gym Leader EN→JP name mapping for possessive card names
+const trainerNameJa: Record<string, string> = {
+  "Brock's": 'タケシの',
+  "Misty's": 'カスミの',
+  "Lt. Surge's": 'マチスの',
+  "Erika's": 'エリカの',
+  "Sabrina's": 'ナツメの',
+  "Koga's": 'キョウの',
+  "Blaine's": 'カツラの',
+  "Giovanni's": 'サカキの',
+  "Rocket's": 'ロケット団の',
+  Dark: 'わるい',
+  Light: 'ひかるの',
+}
+
+/** Look up JP name for a Pokemon. Handles "ex", "V", possessives, etc. */
 function lookupJaName(enName: string): string | null {
   // Direct match
   if (pokemonNameEnToJa[enName]) return pokemonNameEnToJa[enName]
@@ -90,8 +123,18 @@ function lookupJaName(enName: string): string | null {
       const base = enName.slice(0, -suffix.length)
       const jaBase = pokemonNameEnToJa[base]
       if (jaBase) {
-        // Reconstruct with JP base + original suffix
         return `${jaBase}${suffix.trim()}`
+      }
+    }
+  }
+
+  // Handle possessive/prefix names: "Brock's Geodude" → "タケシのイシツブテ"
+  for (const [prefix, jaPrefix] of Object.entries(trainerNameJa)) {
+    if (enName.startsWith(`${prefix} `)) {
+      const pokemonName = enName.slice(prefix.length + 1)
+      const jaPokemon = pokemonNameEnToJa[pokemonName]
+      if (jaPokemon) {
+        return `${jaPrefix}${jaPokemon}`
       }
     }
   }
