@@ -1,10 +1,9 @@
 import { Hono } from 'hono'
 import { db } from '~/db/index.ts'
 import { cards, newsArticles, sets } from '~/db/schema.ts'
+import { BASE_URL } from '~/views/layout.ts'
 
 const seo = new Hono()
-
-const BASE_URL = process.env.BASE_URL ?? 'https://pokecardex.com'
 
 seo.get('/robots.txt', (c) => {
   const body = `User-agent: *
@@ -80,4 +79,4 @@ ${urls.join('\n')}
   return c.body(xml, 200, { 'Content-Type': 'application/xml' })
 })
 
-export { seo, BASE_URL }
+export { seo }

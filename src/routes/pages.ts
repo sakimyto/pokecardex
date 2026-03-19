@@ -8,7 +8,20 @@ import {
   getCardPriceSummary,
   getRecentPrices,
 } from '~/services/prices.ts'
-import { escapeHtml, layout, rarityBadge, typeBadge } from '~/views/layout.ts'
+import { BASE_URL, escapeHtml, layout, rarityBadge, typeBadge } from '~/views/layout.ts'
+
+function breadcrumbJsonLd(items: { name: string; url: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: `${BASE_URL}${item.url}`,
+    })),
+  }
+}
 
 const pages = new Hono()
 
@@ -163,13 +176,20 @@ pages.get('/sets/:id', async (c) => {
       title: setTitle,
       description: `${set.nameJa} (${set.codeJa}) - ${set.totalCards ?? '?'} cards. Japanese Pokemon TCG set with English translations.`,
       path: `/sets/${set.id}`,
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'CollectionPage',
-        name: setTitle,
-        description: `Pokemon TCG set: ${set.nameJa}`,
-        numberOfItems: setCards.length,
-      },
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: setTitle,
+          description: `Pokemon TCG set: ${set.nameJa}`,
+          numberOfItems: setCards.length,
+        },
+        breadcrumbJsonLd([
+          { name: 'Home', url: '/' },
+          { name: 'Sets', url: '/sets' },
+          { name: setTitle, url: `/sets/${set.id}` },
+        ]),
+      ],
     },
   )
   return c.html(body)
@@ -288,14 +308,25 @@ pages.get('/cards/:id', async (c) => {
       title: cardTitle,
       description: `${card.nameJa} (${card.nameEn ?? ''}) - ${card.numberInSet} from ${set?.nameJa ?? card.setId}. Rarity: ${card.rarity ?? 'N/A'}.`,
       path: `/cards/${card.id}`,
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'Product',
-        name: cardTitle,
-        description: `Pokemon TCG card: ${card.nameJa}`,
-        category: 'Trading Card',
-        brand: { '@type': 'Brand', name: 'Pokemon TCG' },
-      },
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: cardTitle,
+          description: `Pokemon TCG card: ${card.nameJa}`,
+          category: 'Trading Card',
+          brand: { '@type': 'Brand', name: 'Pokemon TCG' },
+        },
+        breadcrumbJsonLd([
+          { name: 'Home', url: '/' },
+          { name: 'Sets', url: '/sets' },
+          {
+            name: typeof setTitle === 'string' ? setTitle : card.setId,
+            url: `/sets/${card.setId}`,
+          },
+          { name: cardTitle, url: `/cards/${card.id}` },
+        ]),
+      ],
     },
   )
   return c.html(body)
@@ -518,13 +549,20 @@ pages.get('/news/:id', async (c) => {
       title,
       description: (article.bodyEn ?? article.bodyJa).slice(0, 160),
       path: `/news/${article.id}`,
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'NewsArticle',
-        headline: title,
-        datePublished: article.publishedAt,
-        publisher: { '@type': 'Organization', name: article.sourceName },
-      },
+      jsonLd: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'NewsArticle',
+          headline: title,
+          datePublished: article.publishedAt,
+          publisher: { '@type': 'Organization', name: article.sourceName },
+        },
+        breadcrumbJsonLd([
+          { name: 'Home', url: '/' },
+          { name: 'News', url: '/news' },
+          { name: title, url: `/news/${article.id}` },
+        ]),
+      ],
     },
   )
   return c.html(body)

@@ -2,10 +2,10 @@ interface SeoMeta {
   title: string
   description?: string
   path?: string
-  jsonLd?: Record<string, unknown>
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[]
 }
 
-const BASE_URL = process.env.BASE_URL ?? 'https://pokecardex.com'
+export const BASE_URL = process.env.BASE_URL ?? 'https://pokecardex.com'
 
 export function layout(title: string, content: string, seo?: SeoMeta): string {
   const pageTitle = `${escapeHtml(title)} | PokeCardex`
@@ -13,9 +13,10 @@ export function layout(title: string, content: string, seo?: SeoMeta): string {
     seo?.description ??
     'Japanese Pokemon TCG card database with EN translations, price tracking, and news.'
   const canonicalUrl = seo?.path ? `${BASE_URL}${seo.path}` : BASE_URL
-  const jsonLdScript = seo?.jsonLd
-    ? `<script type="application/ld+json">${JSON.stringify(seo.jsonLd)}</script>`
-    : ''
+  const jsonLdItems = seo?.jsonLd ? (Array.isArray(seo.jsonLd) ? seo.jsonLd : [seo.jsonLd]) : []
+  const jsonLdScript = jsonLdItems
+    .map((item) => `<script type="application/ld+json">${JSON.stringify(item)}</script>`)
+    .join('\n  ')
 
   return `<!DOCTYPE html>
 <html lang="en">
