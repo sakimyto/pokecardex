@@ -102,6 +102,41 @@ describe('SSR pages', () => {
     expect(body).toContain('card(s) found')
   })
 
+  test('GET /search with type filter returns filtered results', async () => {
+    const res = await app.request('/search?type=Fire')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('card(s) found')
+    expect(body).toContain('type-fire')
+  })
+
+  test('GET /search with set filter returns filtered results', async () => {
+    const res = await app.request('/search?set=sv3pt5')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('card(s) found')
+  })
+
+  test('GET /search with combined filters works', async () => {
+    const res = await app.request('/search?type=Fire&rarity=R')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('card(s) found')
+  })
+
+  test('GET /search shows filter dropdowns', async () => {
+    const res = await app.request('/search')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('All Types')
+    expect(body).toContain('All Rarities')
+    expect(body).toContain('All Sets')
+  })
+
   test('GET /api/cards?q=pikachu returns search results', async () => {
     const res = await app.request('/api/cards?q=Pikachu')
     const body = await res.json()

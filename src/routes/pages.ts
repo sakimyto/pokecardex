@@ -1,4 +1,4 @@
-import { desc, eq, like, or } from 'drizzle-orm'
+import { and, desc, eq, like, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '~/db/index.ts'
 import { cards, newsArticles, sets } from '~/db/schema.ts'
@@ -343,20 +343,93 @@ pages.get('/cards/:id', async (c) => {
 
 pages.get('/search', async (c) => {
   const q = c.req.query('q')?.trim() ?? ''
+  const typeFilter = c.req.query('type') ?? ''
+  const rarityFilter = c.req.query('rarity') ?? ''
+  const setFilter = c.req.query('set') ?? ''
+  const page = Math.max(1, Number(c.req.query('page')) || 1)
+  const perPage = 60
 
-  let results: (typeof cards.$inferSelect)[] = []
+  const hasFilters = q || typeFilter || rarityFilter || setFilter
+
+  // Build filter conditions
+  const conditions = []
   if (q) {
     const pattern = `%${q}%`
+    conditions.push(or(like(cards.nameJa, pattern), like(cards.nameEn, pattern)))
+  }
+  if (typeFilter) {
+    conditions.push(eq(cards.typeEn, typeFilter))
+  }
+  if (rarityFilter) {
+    conditions.push(eq(cards.rarity, rarityFilter))
+  }
+  if (setFilter) {
+    conditions.push(eq(cards.setId, setFilter))
+  }
+
+  // Fetch filter options for dropdowns
+  const [allSets, allTypes, allRarities] = await Promise.all([
+    db.select({ id: sets.id, nameJa: sets.nameJa, nameEn: sets.nameEn }).from(sets),
+    db.selectDistinct({ typeEn: cards.typeEn }).from(cards).where(sql`${cards.typeEn} IS NOT NULL`),
+    db.selectDistinct({ rarity: cards.rarity }).from(cards).where(sql`${cards.rarity} IS NOT NULL`),
+  ])
+
+  const typeOptions = allTypes
+    .map((t) => t.typeEn)
+    .filter(Boolean)
+    .sort() as string[]
+  const rarityOptions = allRarities
+    .map((r) => r.rarity)
+    .filter(Boolean)
+    .sort() as string[]
+
+  let results: (typeof cards.$inferSelect)[] = []
+  let totalCount = 0
+
+  if (hasFilters) {
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+
+    const countResult = await db.select({ count: sql<number>`count(*)` }).from(cards).where(where)
+    totalCount = countResult[0].count
+
     results = await db
       .select()
       .from(cards)
-      .where(or(like(cards.nameJa, pattern), like(cards.nameEn, pattern)))
+      .where(where)
+      .limit(perPage)
+      .offset((page - 1) * perPage)
   }
 
-  const resultHtml = q
-    ? results.length === 0
-      ? `<p>No cards found for "${escapeHtml(q)}".</p>`
-      : `<p>${results.length} card(s) found for "${escapeHtml(q)}".</p>
+  const totalPages = Math.ceil(totalCount / perPage)
+
+  // Build query string preserving filters
+  function filterUrl(overrides: Record<string, string>): string {
+    const params = new URLSearchParams()
+    const merged = {
+      q,
+      type: typeFilter,
+      rarity: rarityFilter,
+      set: setFilter,
+      page: '',
+      ...overrides,
+    }
+    for (const [k, v] of Object.entries(merged)) {
+      if (v && k !== 'page') params.set(k, v)
+      if (k === 'page' && v && v !== '1') params.set(k, v)
+    }
+    const qs = params.toString()
+    return `/search${qs ? `?${qs}` : ''}`
+  }
+
+  function selectOption(value: string, label: string, selected: string): string {
+    return `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(label)}</option>`
+  }
+
+  const resultHtml = !hasFilters
+    ? '<p>Enter a card name or select filters to search.</p>'
+    : totalCount === 0
+      ? '<p>No cards found matching your criteria.</p>'
+      : `<p>${totalCount.toLocaleString()} card(s) found${totalPages > 1 ? ` (page ${page}/${totalPages})` : ''}.</p>
          <div class="card-grid">
            ${results
              .map(
@@ -376,24 +449,71 @@ pages.get('/search', async (c) => {
            `,
              )
              .join('')}
-         </div>`
-    : '<p>Enter a card name in Japanese or English to search.</p>'
+         </div>
+         ${
+           totalPages > 1
+             ? `<nav class="pagination" aria-label="Search results pages" style="margin-top:var(--space-lg);display:flex;gap:var(--space-sm);justify-content:center;flex-wrap:wrap;">
+               ${page > 1 ? `<a href="${filterUrl({ page: String(page - 1) })}">&laquo; Prev</a>` : ''}
+               ${Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+                 // Show pages around current page
+                 let p: number
+                 if (totalPages <= 10) {
+                   p = i + 1
+                 } else if (page <= 5) {
+                   p = i + 1
+                 } else if (page >= totalPages - 4) {
+                   p = totalPages - 9 + i
+                 } else {
+                   p = page - 4 + i
+                 }
+                 return p === page
+                   ? `<strong style="padding:var(--space-xs) var(--space-sm);">${p}</strong>`
+                   : `<a href="${filterUrl({ page: String(p) })}" style="padding:var(--space-xs) var(--space-sm);">${p}</a>`
+               }).join('')}
+               ${page < totalPages ? `<a href="${filterUrl({ page: String(page + 1) })}">Next &raquo;</a>` : ''}
+             </nav>`
+             : ''
+         }`
+
+  const seoTitle = [
+    typeFilter && `${typeFilter} Type`,
+    rarityFilter && `${rarityFilter} Rarity`,
+    setFilter && allSets.find((s) => s.id === setFilter)?.nameEn,
+    q && `"${q}"`,
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   const body = layout(
     'Search Cards',
     `
     <h2>Search Cards</h2>
-    <form class="search-form" method="get" action="/search" role="search" aria-label="Card search">
+    <form class="search-form" method="get" action="/search" role="search" aria-label="Card search" style="flex-wrap:wrap;">
       <label for="search-input" class="sr-only">Search by card name</label>
-      <input id="search-input" type="search" name="q" value="${escapeHtml(q)}" placeholder="Search by name (JP or EN) / \u540d\u524d\u3067\u691c\u7d22..." autofocus>
+      <input id="search-input" type="search" name="q" value="${escapeHtml(q)}" placeholder="Search by name (JP or EN) / \u540d\u524d\u3067\u691c\u7d22..." style="min-width:200px;">
+      <select name="type" aria-label="Filter by type" style="padding:var(--space-sm) var(--space-md);border:1px solid var(--color-input-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);">
+        <option value="">All Types</option>
+        ${typeOptions.map((t) => selectOption(t, t, typeFilter)).join('')}
+      </select>
+      <select name="rarity" aria-label="Filter by rarity" style="padding:var(--space-sm) var(--space-md);border:1px solid var(--color-input-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);">
+        <option value="">All Rarities</option>
+        ${rarityOptions.map((r) => selectOption(r, r, rarityFilter)).join('')}
+      </select>
+      <select name="set" aria-label="Filter by set" style="padding:var(--space-sm) var(--space-md);border:1px solid var(--color-input-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--color-text);max-width:250px;">
+        <option value="">All Sets</option>
+        ${allSets.map((s) => selectOption(s.id, `${s.nameJa}${s.nameEn ? ` / ${s.nameEn}` : ''}`, setFilter)).join('')}
+      </select>
       <button type="submit">Search</button>
     </form>
+    ${hasFilters ? `<div style="margin-bottom:var(--space-md);font-size:var(--font-sm);"><a href="/search">Clear all filters</a></div>` : ''}
     ${resultHtml}
     `,
     {
-      title: 'Search Cards',
-      description: 'Search Japanese Pokemon TCG cards by name in Japanese or English.',
-      path: '/search',
+      title: seoTitle ? `${seoTitle} - Search Cards` : 'Search Cards',
+      description: seoTitle
+        ? `Browse ${seoTitle} Pokemon TCG cards. Japanese Pokemon TCG card database with English translations.`
+        : 'Search Japanese Pokemon TCG cards by name, type, rarity, and set.',
+      path: `/search${q || typeFilter || rarityFilter || setFilter ? `?${new URLSearchParams(Object.entries({ q, type: typeFilter, rarity: rarityFilter, set: setFilter }).filter(([, v]) => v)).toString()}` : ''}`,
     },
   )
   return c.html(body)
