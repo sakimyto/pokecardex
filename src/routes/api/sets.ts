@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '~/db/index.ts'
 import { sets } from '~/db/schema.ts'
@@ -11,10 +12,7 @@ setsApi.get('/', async (c) => {
 
 setsApi.get('/:id', async (c) => {
   const setId = c.req.param('id')
-  const result = await db
-    .select()
-    .from(sets)
-    .where((fields, { eq }) => eq(fields.id, setId))
+  const result = await db.select().from(sets).where(eq(sets.id, setId))
   if (result.length === 0) {
     return c.json({ error: 'Set not found' }, 404)
   }
