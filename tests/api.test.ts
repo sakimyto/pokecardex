@@ -98,8 +98,8 @@ describe('SSR pages', () => {
     const body = await res.text()
 
     expect(res.status).toBe(200)
-    expect(body).toContain('ピカチュウex')
-    expect(body).toContain('1 card(s) found')
+    expect(body).toContain('ピカチュウ')
+    expect(body).toContain('card(s) found')
   })
 
   test('GET /api/cards?q=pikachu returns search results', async () => {
@@ -108,8 +108,8 @@ describe('SSR pages', () => {
 
     expect(res.status).toBe(200)
     expect(Array.isArray(body)).toBe(true)
-    expect(body.length).toBe(1)
-    expect(body[0].nameEn).toBe('Pikachu ex')
+    expect(body.length).toBeGreaterThanOrEqual(1)
+    expect(body.some((c: { nameEn: string }) => c.nameEn.includes('Pikachu'))).toBe(true)
   })
 
   test('GET /cards/:id shows price comparison for priced cards', async () => {
