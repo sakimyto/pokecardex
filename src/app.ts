@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { compress } from 'hono/compress'
 import { logger } from 'hono/logger'
 import { cardsApi } from '~/routes/api/cards.ts'
 import { newsApi } from '~/routes/api/news.ts'
@@ -11,15 +12,25 @@ import { seo } from '~/routes/seo.ts'
 const app = new Hono()
 
 app.use(logger())
+app.use(compress())
 
-// Cache headers for SSR pages (short cache, stale-while-revalidate)
+// Cache headers
 app.use('*', async (c, next) => {
   await next()
-  if (c.res.headers.get('Content-Type')?.includes('text/html')) {
+  const ct = c.res.headers.get('Content-Type') ?? ''
+  if (ct.includes('text/html')) {
     c.res.headers.set(
       'Cache-Control',
       'public, max-age=60, s-maxage=300, stale-while-revalidate=600',
     )
+  } else if (ct.includes('application/json')) {
+    c.res.headers.set(
+      'Cache-Control',
+      'public, max-age=30, s-maxage=120, stale-while-revalidate=300',
+    )
+  } else if (ct.includes('text/xml') || ct.includes('text/plain')) {
+    // sitemap.xml, robots.txt
+    c.res.headers.set('Cache-Control', 'public, max-age=3600, s-maxage=86400')
   }
 })
 
