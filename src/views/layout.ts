@@ -47,11 +47,21 @@ export function layout(title: string, content: string, seo?: SeoMeta): string {
     main { padding: 2rem 0; }
     a { color: #4361ee; text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .card-grid { margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
-    .card-item { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.2s; }
-    .card-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-    .card-item h4 { font-size: 0.95rem; margin-bottom: 0.25rem; }
-    .card-item .meta { font-size: 0.8rem; color: #666; }
+    .card-grid { margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .card-item { background: #fff; padding: 0.75rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: box-shadow 0.2s, transform 0.2s; }
+    .card-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.18); transform: translateY(-2px); }
+    .card-item h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+    .card-item .meta { font-size: 0.75rem; color: #666; }
+    .card-img { width: 100%; aspect-ratio: 63/88; object-fit: contain; border-radius: 6px; background: #f1f5f9; margin-bottom: 0.5rem; }
+    .card-detail-img { max-width: 300px; width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .set-logo { width: 120px; height: auto; margin-bottom: 0.5rem; }
+    @media (max-width: 768px) {
+      .card-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.75rem; }
+      header .container { flex-direction: column; gap: 0.5rem; }
+      header nav a { margin-left: 0; margin-right: 1rem; }
+      .detail-layout { grid-template-columns: 1fr !important; }
+      .price-grid { grid-template-columns: 1fr !important; }
+    }
     .rarity { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
     .rarity-C { background: #e2e8f0; color: #475569; }
     .rarity-U { background: #dbeafe; color: #1e40af; }

@@ -10,6 +10,15 @@ import {
 } from '~/services/prices.ts'
 import { BASE_URL, escapeHtml, layout, rarityBadge, typeBadge } from '~/views/layout.ts'
 
+function cardImage(card: {
+  imageUrlEn: string | null
+  nameJa: string
+  nameEn: string | null
+}): string {
+  if (!card.imageUrlEn) return ''
+  return `<img class="card-img" src="${escapeHtml(card.imageUrlEn)}" alt="${escapeHtml(card.nameEn ?? card.nameJa)}" loading="lazy">`
+}
+
 function breadcrumbJsonLd(items: { name: string; url: string }[]) {
   return {
     '@context': 'https://schema.org',
@@ -81,11 +90,10 @@ pages.get('/sets', async (c) => {
             (s) => `
       <a href="/sets/${escapeHtml(s.id)}" style="text-decoration:none;color:inherit;">
         <div class="set-card" style="cursor:pointer;">
+          ${s.imageUrl ? `<img class="set-logo" src="${escapeHtml(s.imageUrl)}" alt="${escapeHtml(s.nameEn ?? s.nameJa)}" loading="lazy">` : ''}
           <h3>${escapeHtml(s.nameJa)}${s.nameEn ? ` / ${escapeHtml(s.nameEn)}` : ''}</h3>
-          <p class="meta">Code: ${escapeHtml(s.codeJa)}${s.codeEn ? ` / ${escapeHtml(s.codeEn)}` : ''}</p>
-          ${s.totalCards ? `<p class="meta">${s.totalCards} cards</p>` : ''}
-          ${s.releaseDateJa ? `<p class="meta">JP Release: ${escapeHtml(s.releaseDateJa)}</p>` : ''}
-          <p class="meta">${escapeHtml(s.seriesJa)}</p>
+          <p class="meta">${escapeHtml(s.codeJa)} &middot; ${s.totalCards ?? '?'} cards</p>
+          ${s.releaseDateJa ? `<p class="meta">JP: ${escapeHtml(s.releaseDateJa)}${s.releaseDateEn ? ` / EN: ${escapeHtml(s.releaseDateEn)}` : ''}</p>` : ''}
         </div>
       </a>
     `,
@@ -139,14 +147,14 @@ pages.get('/sets/:id', async (c) => {
             (card) => `
         <a href="/cards/${escapeHtml(card.id)}" style="text-decoration:none;color:inherit;">
           <div class="card-item">
+            ${cardImage(card)}
             <h4>${escapeHtml(card.nameJa)}</h4>
-            ${card.nameEn ? `<p class="meta">${escapeHtml(card.nameEn)}</p>` : ''}
+            ${card.nameEn && card.nameEn !== card.nameJa ? `<p class="meta">${escapeHtml(card.nameEn)}</p>` : ''}
             <p class="meta">
               ${escapeHtml(card.numberInSet)}
               ${rarityBadge(card.rarity)}
               ${typeBadge(card.typeEn)}
             </p>
-            ${card.hp ? `<p class="meta">HP ${card.hp}</p>` : ''}
           </div>
         </a>
       `,
@@ -232,7 +240,7 @@ pages.get('/cards/:id', async (c) => {
             </div>`
           : ''
       }
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem;">
+      <div class="price-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem;">
         <div>
           <h4 style="color:#e11d48;margin-bottom:0.5rem;">🇯🇵 JP Markets</h4>
           ${
@@ -288,7 +296,8 @@ pages.get('/cards/:id', async (c) => {
       ${escapeHtml(cardTitle)}
     </div>
     <h2>${escapeHtml(cardTitle)}</h2>
-    <div style="display:grid;grid-template-columns:1fr;gap:2rem;margin-top:1rem;">
+    <div class="detail-layout" style="display:grid;grid-template-columns:auto 1fr;gap:2rem;margin-top:1rem;align-items:start;">
+      ${card.imageUrlEn ? `<img class="card-detail-img" src="${escapeHtml(card.imageUrlEn)}" alt="${escapeHtml(card.nameEn ?? card.nameJa)}">` : ''}
       <div class="set-card">
         <table class="detail-table">
           <tr><th>Name (JP)</th><td>${escapeHtml(card.nameJa)}</td></tr>
@@ -354,14 +363,14 @@ pages.get('/search', async (c) => {
                (card) => `
              <a href="/cards/${escapeHtml(card.id)}" style="text-decoration:none;color:inherit;">
                <div class="card-item">
+                 ${cardImage(card)}
                  <h4>${escapeHtml(card.nameJa)}</h4>
-                 ${card.nameEn ? `<p class="meta">${escapeHtml(card.nameEn)}</p>` : ''}
+                 ${card.nameEn && card.nameEn !== card.nameJa ? `<p class="meta">${escapeHtml(card.nameEn)}</p>` : ''}
                  <p class="meta">
                    ${escapeHtml(card.numberInSet)}
                    ${rarityBadge(card.rarity)}
                    ${typeBadge(card.typeEn)}
                  </p>
-                 ${card.hp ? `<p class="meta">HP ${card.hp}</p>` : ''}
                </div>
              </a>
            `,
