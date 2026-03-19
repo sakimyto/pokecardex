@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { createDb } from './index.ts'
-import { cards, sets } from './schema.ts'
+import { arbitrageAlerts, cards, priceStats, prices, sets } from './schema.ts'
 
 const db = createDb()
 
@@ -415,7 +415,502 @@ async function seed() {
     }
   }
 
+  // Seed price snapshots for high-value cards
+  const now = new Date()
+  const seedPrices = [
+    // Charizard ex (sv7-010) — high demand, big JP/EN gap
+    {
+      cardId: 'sv7-010',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 280000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 300000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 7),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 320000,
+      currency: 'JPY',
+      condition: 'mint',
+      scrapedAt: daysAgo(now, 14),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'yahoo_auctions',
+      region: 'jp',
+      priceCents: 260000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 1),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 3500,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 3800,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 7),
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'ebay',
+      region: 'en',
+      priceCents: 4200,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 2),
+    },
+
+    // Pikachu ex (sv7-030) — iconic, always popular
+    {
+      cardId: 'sv7-030',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 150000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 160000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 5),
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'yahoo_auctions',
+      region: 'jp',
+      priceCents: 140000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 1),
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 1800,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'ebay',
+      region: 'en',
+      priceCents: 2200,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 3),
+    },
+
+    // Mewtwo ex (sv7-040) — strong arbitrage opportunity
+    {
+      cardId: 'sv7-040',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 80000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-040',
+      marketplace: 'yahoo_auctions',
+      region: 'jp',
+      priceCents: 75000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 2),
+    },
+    {
+      cardId: 'sv7-040',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 1200,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7-040',
+      marketplace: 'ebay',
+      region: 'en',
+      priceCents: 1500,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 1),
+    },
+
+    // Miraidon ex (sv8-023) — new set hype
+    {
+      cardId: 'sv8-023',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 180000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv8-023',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 200000,
+      currency: 'JPY',
+      condition: 'mint',
+      scrapedAt: daysAgo(now, 3),
+    },
+    {
+      cardId: 'sv8-023',
+      marketplace: 'yahoo_auctions',
+      region: 'jp',
+      priceCents: 170000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 1),
+    },
+    {
+      cardId: 'sv8-023',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 2500,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+
+    // Garchomp ex (sv8-040) — moderate value
+    {
+      cardId: 'sv8-040',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 50000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv8-040',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 600,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+
+    // Giratina ex (sv7a-050) — chase card
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'mercari',
+      region: 'jp',
+      priceCents: 220000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'yahoo_auctions',
+      region: 'jp',
+      priceCents: 210000,
+      currency: 'JPY',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 2),
+    },
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      priceCents: 2800,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 0),
+    },
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'ebay',
+      region: 'en',
+      priceCents: 3200,
+      currency: 'USD',
+      condition: 'near_mint',
+      scrapedAt: daysAgo(now, 4),
+    },
+  ]
+
+  const existingPrices = await db.select().from(prices)
+  if (existingPrices.length === 0) {
+    for (const price of seedPrices) {
+      await db.insert(prices).values(price)
+    }
+    console.log(`  + ${seedPrices.length} price snapshots seeded`)
+  } else {
+    console.log(`  = Prices already seeded (${existingPrices.length} records)`)
+  }
+
+  // Seed aggregated price stats (current period)
+  const periodStart = daysAgo(now, 30)
+  const periodEnd = daysAgo(now, 0)
+  const seedStats = [
+    {
+      cardId: 'sv7-010',
+      marketplace: 'mercari',
+      region: 'jp',
+      currency: 'JPY',
+      avgPriceCents: 300000,
+      minPriceCents: 260000,
+      maxPriceCents: 320000,
+      medianPriceCents: 290000,
+      sampleCount: 4,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 3650,
+      minPriceCents: 3500,
+      maxPriceCents: 3800,
+      medianPriceCents: 3650,
+      sampleCount: 2,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-010',
+      marketplace: 'ebay',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 4200,
+      minPriceCents: 4200,
+      maxPriceCents: 4200,
+      medianPriceCents: 4200,
+      sampleCount: 1,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'mercari',
+      region: 'jp',
+      currency: 'JPY',
+      avgPriceCents: 155000,
+      minPriceCents: 150000,
+      maxPriceCents: 160000,
+      medianPriceCents: 155000,
+      sampleCount: 2,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-030',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 1800,
+      minPriceCents: 1800,
+      maxPriceCents: 1800,
+      medianPriceCents: 1800,
+      sampleCount: 1,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-040',
+      marketplace: 'mercari',
+      region: 'jp',
+      currency: 'JPY',
+      avgPriceCents: 80000,
+      minPriceCents: 75000,
+      maxPriceCents: 80000,
+      medianPriceCents: 77500,
+      sampleCount: 2,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7-040',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 1200,
+      minPriceCents: 1200,
+      maxPriceCents: 1200,
+      medianPriceCents: 1200,
+      sampleCount: 1,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv8-023',
+      marketplace: 'mercari',
+      region: 'jp',
+      currency: 'JPY',
+      avgPriceCents: 190000,
+      minPriceCents: 170000,
+      maxPriceCents: 200000,
+      medianPriceCents: 185000,
+      sampleCount: 3,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv8-023',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 2500,
+      minPriceCents: 2500,
+      maxPriceCents: 2500,
+      medianPriceCents: 2500,
+      sampleCount: 1,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'mercari',
+      region: 'jp',
+      currency: 'JPY',
+      avgPriceCents: 215000,
+      minPriceCents: 210000,
+      maxPriceCents: 220000,
+      medianPriceCents: 215000,
+      sampleCount: 2,
+      periodStart,
+      periodEnd,
+    },
+    {
+      cardId: 'sv7a-050',
+      marketplace: 'tcgplayer',
+      region: 'en',
+      currency: 'USD',
+      avgPriceCents: 2800,
+      minPriceCents: 2800,
+      maxPriceCents: 2800,
+      medianPriceCents: 2800,
+      sampleCount: 1,
+      periodStart,
+      periodEnd,
+    },
+  ]
+
+  const existingStats = await db.select().from(priceStats)
+  if (existingStats.length === 0) {
+    for (const stat of seedStats) {
+      await db.insert(priceStats).values(stat)
+    }
+    console.log(`  + ${seedStats.length} price stats seeded`)
+  } else {
+    console.log(`  = Price stats already seeded (${existingStats.length} records)`)
+  }
+
+  // Seed arbitrage alerts (JP cheaper than EN equivalent in USD)
+  // Using approximate rate: 1 USD = 150 JPY
+  const seedAlerts = [
+    {
+      cardId: 'sv7-010',
+      jpPriceCents: 280000,
+      enPriceCents: 3500,
+      jpCurrency: 'JPY',
+      enCurrency: 'USD',
+      spreadPercent: 87.5,
+      jpMarketplace: 'mercari',
+      enMarketplace: 'tcgplayer',
+      isActive: true,
+    },
+    {
+      cardId: 'sv7-040',
+      jpPriceCents: 80000,
+      enPriceCents: 1200,
+      jpCurrency: 'JPY',
+      enCurrency: 'USD',
+      spreadPercent: 125.0,
+      jpMarketplace: 'mercari',
+      enMarketplace: 'tcgplayer',
+      isActive: true,
+    },
+    {
+      cardId: 'sv7a-050',
+      jpPriceCents: 220000,
+      enPriceCents: 2800,
+      jpCurrency: 'JPY',
+      enCurrency: 'USD',
+      spreadPercent: 90.9,
+      jpMarketplace: 'mercari',
+      enMarketplace: 'tcgplayer',
+      isActive: true,
+    },
+    {
+      cardId: 'sv8-023',
+      jpPriceCents: 180000,
+      enPriceCents: 2500,
+      jpCurrency: 'JPY',
+      enCurrency: 'USD',
+      spreadPercent: 108.3,
+      jpMarketplace: 'mercari',
+      enMarketplace: 'tcgplayer',
+      isActive: true,
+    },
+    {
+      cardId: 'sv7-030',
+      jpPriceCents: 150000,
+      enPriceCents: 1800,
+      jpCurrency: 'JPY',
+      enCurrency: 'USD',
+      spreadPercent: 80.0,
+      jpMarketplace: 'mercari',
+      enMarketplace: 'tcgplayer',
+      isActive: true,
+    },
+  ]
+
+  const existingAlerts = await db.select().from(arbitrageAlerts)
+  if (existingAlerts.length === 0) {
+    for (const alert of seedAlerts) {
+      await db.insert(arbitrageAlerts).values(alert)
+    }
+    console.log(`  + ${seedAlerts.length} arbitrage alerts seeded`)
+  } else {
+    console.log(`  = Arbitrage alerts already seeded (${existingAlerts.length} records)`)
+  }
+
   console.log('Seeding complete.')
+}
+
+function daysAgo(from: Date, days: number): string {
+  const d = new Date(from)
+  d.setDate(d.getDate() - days)
+  return d.toISOString()
 }
 
 seed()

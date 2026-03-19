@@ -111,4 +111,75 @@ describe('SSR pages', () => {
     expect(body.length).toBe(1)
     expect(body[0].nameEn).toBe('Pikachu ex')
   })
+
+  test('GET /cards/:id shows price comparison for priced cards', async () => {
+    const res = await app.request('/cards/sv7-010')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('Price Comparison')
+    expect(body).toContain('JP Markets')
+    expect(body).toContain('EN Markets')
+    expect(body).toContain('mercari')
+    expect(body).toContain('Recent Price History')
+  })
+
+  test('GET /cards/:id shows arbitrage badge for cards with spread', async () => {
+    const res = await app.request('/cards/sv7-010')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('Arbitrage')
+    expect(body).toContain('spread')
+  })
+
+  test('GET /cards/:id without prices has no price section', async () => {
+    const res = await app.request('/cards/sv8-001')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(body).toContain('タマタマ')
+    expect(body).not.toContain('Price Comparison')
+  })
+
+  test('GET /prices shows arbitrage page', async () => {
+    const res = await app.request('/prices')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('text/html')
+    expect(body).toContain('Price Tracker')
+    expect(body).toContain('Arbitrage')
+    expect(body).toContain('Active Opportunities')
+  })
+
+  test('GET /prices shows arbitrage alerts with card names', async () => {
+    const res = await app.request('/prices')
+    const body = await res.text()
+
+    expect(res.status).toBe(200)
+    // Should contain at least one card from seed data
+    expect(body).toContain('リザードンex')
+    expect(body).toContain('mercari')
+  })
+
+  test('GET /api/prices/stats/:cardId returns price stats', async () => {
+    const res = await app.request('/api/prices/stats/sv7-010')
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBeGreaterThan(0)
+    expect(body[0].cardId).toBe('sv7-010')
+  })
+
+  test('GET /api/prices/arbitrage returns active alerts', async () => {
+    const res = await app.request('/api/prices/arbitrage')
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(Array.isArray(body)).toBe(true)
+    expect(body.length).toBeGreaterThan(0)
+    expect(body[0].spreadPercent).toBeGreaterThan(0)
+  })
 })

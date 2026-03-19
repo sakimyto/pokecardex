@@ -79,6 +79,7 @@ export function layout(title: string, content: string, seo?: SeoMeta): string {
         <a href="/">Home</a>
         <a href="/sets">Sets</a>
         <a href="/search">Search</a>
+        <a href="/prices">Prices</a>
         <a href="/news">News</a>
       </nav>
     </div>

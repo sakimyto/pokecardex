@@ -2,6 +2,12 @@ import { eq, like, or } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { db } from '~/db/index.ts'
 import { cards, sets } from '~/db/schema.ts'
+import {
+  formatPrice,
+  getActiveArbitrageAlerts,
+  getCardPriceSummary,
+  getRecentPrices,
+} from '~/services/prices.ts'
 import { escapeHtml, layout, rarityBadge, typeBadge } from '~/views/layout.ts'
 
 const pages = new Hono()
@@ -22,6 +28,11 @@ pages.get('/', (c) => {
         <h3>Card Search</h3>
         <p>Search cards by Japanese or English name.</p>
         <a href="/search">Search Cards &rarr;</a>
+      </div>
+      <div class="set-card">
+        <h3>Price Tracker</h3>
+        <p>Compare JP vs EN prices and find arbitrage opportunities.</p>
+        <a href="/prices">View Prices &rarr;</a>
       </div>
       <div class="set-card">
         <h3>News Feed</h3>
@@ -175,8 +186,75 @@ pages.get('/cards/:id', async (c) => {
   const setResult = await db.select().from(sets).where(eq(sets.id, card.setId))
   const set = setResult[0]
 
+  const [priceSummary, recentPrices] = await Promise.all([
+    getCardPriceSummary(card.id),
+    getRecentPrices(card.id),
+  ])
+
   const cardTitle = `${card.nameJa}${card.nameEn ? ` / ${card.nameEn}` : ''}`
   const setTitle = set ? `${set.nameJa}${set.nameEn ? ` / ${set.nameEn}` : ''}` : card.setId
+
+  const hasPrices = priceSummary.jp.length > 0 || priceSummary.en.length > 0
+
+  const priceSection = !hasPrices
+    ? ''
+    : `
+    <div class="set-card" style="margin-top:1.5rem;">
+      <h3>Price Comparison</h3>
+      ${
+        priceSummary.arbitrage
+          ? `<div class="arbitrage-badge" style="margin:1rem 0;padding:0.75rem 1rem;background:${priceSummary.arbitrage.spreadPercent > 50 ? '#dcfce7' : '#fef3c7'};border-radius:8px;font-weight:600;">
+              Arbitrage: JP ¥${priceSummary.arbitrage.jpPriceJpy.toLocaleString()} (~$${priceSummary.arbitrage.jpInUsd.toFixed(2)}) vs EN $${(priceSummary.arbitrage.enPriceUsd / 100).toFixed(2)}
+              &mdash; <span style="color:${priceSummary.arbitrage.spreadPercent > 50 ? '#16a34a' : '#d97706'};">${priceSummary.arbitrage.spreadPercent > 0 ? '+' : ''}${priceSummary.arbitrage.spreadPercent}% spread</span>
+            </div>`
+          : ''
+      }
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1rem;">
+        <div>
+          <h4 style="color:#e11d48;margin-bottom:0.5rem;">🇯🇵 JP Markets</h4>
+          ${
+            priceSummary.jp.length === 0
+              ? '<p class="meta">No JP price data yet</p>'
+              : `<table class="detail-table">
+              ${priceSummary.jp.map((p) => `<tr><th>${escapeHtml(p.marketplace)}</th><td>${formatPrice(p.avgCents, p.currency)}</td></tr>`).join('')}
+            </table>`
+          }
+        </div>
+        <div>
+          <h4 style="color:#2563eb;margin-bottom:0.5rem;">🌍 EN Markets</h4>
+          ${
+            priceSummary.en.length === 0
+              ? '<p class="meta">No EN price data yet</p>'
+              : `<table class="detail-table">
+              ${priceSummary.en.map((p) => `<tr><th>${escapeHtml(p.marketplace)}</th><td>${formatPrice(p.avgCents, p.currency)}</td></tr>`).join('')}
+            </table>`
+          }
+        </div>
+      </div>
+    </div>
+    ${
+      recentPrices.length > 0
+        ? `<div class="set-card" style="margin-top:1.5rem;">
+        <h3>Recent Price History</h3>
+        <table class="detail-table" style="margin-top:0.5rem;">
+          <thead><tr><th>Date</th><th>Source</th><th>Price</th><th>Condition</th></tr></thead>
+          <tbody>
+            ${recentPrices
+              .map(
+                (p) =>
+                  `<tr>
+                <td class="meta">${new Date(p.scrapedAt).toLocaleDateString()}</td>
+                <td>${escapeHtml(p.marketplace)} (${p.region.toUpperCase()})</td>
+                <td><strong>${formatPrice(p.priceCents, p.currency)}</strong></td>
+                <td class="meta">${p.condition ? escapeHtml(p.condition) : '—'}</td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>
+      </div>`
+        : ''
+    }`
 
   const body = layout(
     cardTitle,
@@ -201,6 +279,7 @@ pages.get('/cards/:id', async (c) => {
         </table>
       </div>
     </div>
+    ${priceSection}
     `,
     {
       title: cardTitle,
@@ -269,6 +348,60 @@ pages.get('/search', async (c) => {
     {
       title: 'Search Cards',
       description: 'Search Japanese Pokemon TCG cards by name in Japanese or English.',
+    },
+  )
+  return c.html(body)
+})
+
+pages.get('/prices', async (c) => {
+  const alerts = await getActiveArbitrageAlerts()
+
+  const alertRows =
+    alerts.length === 0
+      ? '<p>No arbitrage opportunities detected yet. Check back once price data is collected.</p>'
+      : `<table class="detail-table" style="margin-top:1rem;">
+          <thead>
+            <tr><th>Card</th><th>JP Price</th><th>EN Price</th><th>Spread</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${alerts
+              .map(
+                ({ alert, card }) => `
+              <tr>
+                <td>
+                  <a href="/cards/${escapeHtml(card.id)}">
+                    <strong>${escapeHtml(card.nameJa)}</strong>
+                    ${card.nameEn ? `<br><span class="meta">${escapeHtml(card.nameEn)}</span>` : ''}
+                  </a>
+                </td>
+                <td>¥${alert.jpPriceCents.toLocaleString()}<br><span class="meta">${escapeHtml(alert.jpMarketplace)}</span></td>
+                <td>$${(alert.enPriceCents / 100).toFixed(2)}<br><span class="meta">${escapeHtml(alert.enMarketplace)}</span></td>
+                <td><span style="color:${alert.spreadPercent > 50 ? '#16a34a' : '#d97706'};font-weight:600;">+${alert.spreadPercent.toFixed(1)}%</span></td>
+                <td><a href="/cards/${escapeHtml(card.id)}">View &rarr;</a></td>
+              </tr>`,
+              )
+              .join('')}
+          </tbody>
+        </table>`
+
+  const body = layout(
+    'Price Tracker',
+    `
+    <h2>JP↔EN Price Tracker</h2>
+    <p>Arbitrage opportunities between Japanese and English Pokemon TCG markets. Buy low in Japan, sell high internationally.</p>
+    <h3 style="margin-top:2rem;">Active Opportunities (${alerts.length})</h3>
+    ${alertRows}
+    `,
+    {
+      title: 'Price Tracker',
+      description:
+        'Compare Japanese and English Pokemon TCG card prices. Find arbitrage opportunities across Mercari, Yahoo Auctions, TCGPlayer, and eBay.',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: 'Pokemon TCG Price Tracker',
+        description: 'JP vs EN price comparison for Pokemon TCG cards',
+      },
     },
   )
   return c.html(body)
