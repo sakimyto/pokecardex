@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
-import { db } from '~/db/index.ts'
 import { cards, newsArticles, sets } from '~/db/schema.ts'
+import type { AppEnv } from '~/types.ts'
 import { BASE_URL } from '~/views/layout.ts'
 
-const seo = new Hono()
+const seo = new Hono<AppEnv>()
 
 seo.get('/robots.txt', (c) => {
   const body = `User-agent: *
@@ -14,6 +14,7 @@ Sitemap: ${BASE_URL}/sitemap.xml`
 })
 
 seo.get('/sitemap.xml', async (c) => {
+  const db = c.var.db
   const allSets = await db.select({ id: sets.id, updatedAt: sets.updatedAt }).from(sets)
   const allCards = await db.select({ id: cards.id, updatedAt: cards.updatedAt }).from(cards)
   const allNews = await db

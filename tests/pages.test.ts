@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { app } from '~/app.ts'
+import { app } from './helper.ts'
 
 describe('Page routes - error handling', () => {
   test('GET /sets/:id returns 404 for unknown set', async () => {

@@ -5,8 +5,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts",
-    "start": "bun run src/index.ts",
+    "dev": "bunx wrangler dev",
+    "dev:local": "bun run --watch src/index.ts",
+    "deploy": "bunx wrangler deploy",
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "test": "bun test",
@@ -19,8 +20,10 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
+    "@cloudflare/workers-types": "^4.20260317.1",
     "@types/bun": "latest",
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "wrangler": "^4.76.0"
   },
   "peerDependencies": {
     "typescript": "^5"

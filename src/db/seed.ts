@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import { createDb } from './index.ts'
+import { createLocalDb } from './local.ts'
 import { arbitrageAlerts, cards, newsArticles, priceStats, prices, sets } from './schema.ts'
 
-const db = createDb()
+const db = createLocalDb()
 
 // 3 recent JP Pokemon TCG sets with real data
 const seedSets = [

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { app } from '~/app.ts'
+import { app } from './helper.ts'
 
 describe('Search edge cases', () => {
   test('Japanese name search returns results', async () => {

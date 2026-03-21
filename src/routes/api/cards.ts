@@ -1,11 +1,12 @@
 import { eq, like, or } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { db } from '~/db/index.ts'
 import { cards } from '~/db/schema.ts'
+import type { AppEnv } from '~/types.ts'
 
-const cardsApi = new Hono()
+const cardsApi = new Hono<AppEnv>()
 
 cardsApi.get('/', async (c) => {
+  const db = c.var.db
   const setId = c.req.query('setId')
   const q = c.req.query('q')?.trim()
 
@@ -27,6 +28,7 @@ cardsApi.get('/', async (c) => {
 })
 
 cardsApi.get('/:id', async (c) => {
+  const db = c.var.db
   const cardId = c.req.param('id')
   const result = await db.select().from(cards).where(eq(cards.id, cardId))
   if (result.length === 0) {

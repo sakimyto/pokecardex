@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { app } from '~/app.ts'
+import { app } from './helper.ts'
 
 describe('health check', () => {
   test('GET /health returns ok', async () => {

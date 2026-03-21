@@ -1,6 +1,6 @@
 import { desc, eq } from 'drizzle-orm'
-import { db } from '~/db/index.ts'
 import { arbitrageAlerts, cards, priceStats, prices } from '~/db/schema.ts'
+import type { AppDatabase } from '~/types.ts'
 
 const JPY_PER_USD = 150
 
@@ -27,7 +27,10 @@ export function jpyToUsd(jpyCents: number): number {
   return Math.round((jpyCents / JPY_PER_USD) * 100) / 100
 }
 
-export async function getCardPriceSummary(cardId: string): Promise<CardPriceSummary> {
+export async function getCardPriceSummary(
+  db: AppDatabase,
+  cardId: string,
+): Promise<CardPriceSummary> {
   const stats = await db
     .select()
     .from(priceStats)
@@ -68,7 +71,7 @@ export async function getCardPriceSummary(cardId: string): Promise<CardPriceSumm
   return { cardId, jp, en, arbitrage }
 }
 
-export async function getRecentPrices(cardId: string, limit = 20) {
+export async function getRecentPrices(db: AppDatabase, cardId: string, limit = 20) {
   return db
     .select()
     .from(prices)
@@ -77,7 +80,7 @@ export async function getRecentPrices(cardId: string, limit = 20) {
     .limit(limit)
 }
 
-export async function getActiveArbitrageAlerts() {
+export async function getActiveArbitrageAlerts(db: AppDatabase) {
   const alerts = await db
     .select({
       alert: arbitrageAlerts,

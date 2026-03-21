@@ -7,7 +7,7 @@
 
 import { eq, sql } from 'drizzle-orm'
 import { pokemonNameEnToJa } from '../data/pokemon-names-ja.ts'
-import { createDb } from '../db/index.ts'
+import { createLocalDb as createDb } from '../db/local.ts'
 import { cards } from '../db/schema.ts'
 
 // Gym Leader EN→JP name mapping for possessive card names

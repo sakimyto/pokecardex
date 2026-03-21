@@ -1,6 +1,5 @@
 import { and, desc, eq, like, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { db } from '~/db/index.ts'
 import { cards, newsArticles, sets } from '~/db/schema.ts'
 import {
   formatPrice,
@@ -8,6 +7,7 @@ import {
   getCardPriceSummary,
   getRecentPrices,
 } from '~/services/prices.ts'
+import type { AppEnv } from '~/types.ts'
 import { BASE_URL, escapeHtml, layout, rarityBadge, typeBadge } from '~/views/layout.ts'
 
 function cardImage(card: {
@@ -32,7 +32,7 @@ function breadcrumbJsonLd(items: { name: string; url: string }[]) {
   }
 }
 
-const pages = new Hono()
+const pages = new Hono<AppEnv>()
 
 pages.get('/', (c) => {
   const body = layout(
@@ -81,6 +81,7 @@ pages.get('/', (c) => {
 })
 
 pages.get('/sets', async (c) => {
+  const db = c.var.db
   const allSets = await db.select().from(sets)
 
   // Count cards per set
@@ -164,6 +165,7 @@ pages.get('/sets', async (c) => {
 })
 
 pages.get('/sets/:id', async (c) => {
+  const db = c.var.db
   const setId = c.req.param('id')
   const setResult = await db.select().from(sets).where(eq(sets.id, setId))
   if (setResult.length === 0) {
@@ -278,6 +280,7 @@ pages.get('/sets/:id', async (c) => {
 })
 
 pages.get('/cards/:id', async (c) => {
+  const db = c.var.db
   const cardId = c.req.param('id')
   const cardResult = await db.select().from(cards).where(eq(cards.id, cardId))
   if (cardResult.length === 0) {
@@ -292,8 +295,8 @@ pages.get('/cards/:id', async (c) => {
   const set = setResult[0]
 
   const [priceSummary, recentPrices, relatedCards] = await Promise.all([
-    getCardPriceSummary(card.id),
-    getRecentPrices(card.id),
+    getCardPriceSummary(db, card.id),
+    getRecentPrices(db, card.id),
     // Find other versions of the same Pokemon across sets
     db
       .select()
@@ -460,6 +463,7 @@ pages.get('/cards/:id', async (c) => {
 })
 
 pages.get('/search', async (c) => {
+  const db = c.var.db
   const q = c.req.query('q')?.trim() ?? ''
   const typeFilter = c.req.query('type') ?? ''
   const rarityFilter = c.req.query('rarity') ?? ''
@@ -638,7 +642,8 @@ pages.get('/search', async (c) => {
 })
 
 pages.get('/prices', async (c) => {
-  const alerts = await getActiveArbitrageAlerts()
+  const db = c.var.db
+  const alerts = await getActiveArbitrageAlerts(db)
 
   const alertRows =
     alerts.length === 0
@@ -693,6 +698,7 @@ pages.get('/prices', async (c) => {
 })
 
 pages.get('/news', async (c) => {
+  const db = c.var.db
   const articles = await db.select().from(newsArticles).orderBy(desc(newsArticles.publishedAt))
 
   const articleList =
@@ -747,6 +753,7 @@ pages.get('/news', async (c) => {
 })
 
 pages.get('/news/:id', async (c) => {
+  const db = c.var.db
   const id = Number(c.req.param('id'))
   if (Number.isNaN(id)) {
     return c.html(

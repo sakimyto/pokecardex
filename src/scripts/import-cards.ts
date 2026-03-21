@@ -15,7 +15,7 @@ import { eq } from 'drizzle-orm'
 import { pokemonNameEnToJa } from '../data/pokemon-names-ja.ts'
 import { typeEnToJa } from '../data/pokemon-types-ja.ts'
 import { setsToImport, svSetMapping } from '../data/sv-set-mapping.ts'
-import { createDb } from '../db/index.ts'
+import { createLocalDb as createDb } from '../db/local.ts'
 import { cards, sets } from '../db/schema.ts'
 
 const API_BASE = 'https://api.pokemontcg.io/v2'

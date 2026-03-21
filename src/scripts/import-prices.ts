@@ -10,7 +10,7 @@
  */
 
 import { eq, sql } from 'drizzle-orm'
-import { createDb } from '../db/index.ts'
+import { createLocalDb as createDb } from '../db/local.ts'
 import { arbitrageAlerts, cards, priceStats, prices, sets } from '../db/schema.ts'
 
 const API_BASE = 'https://api.pokemontcg.io/v2'

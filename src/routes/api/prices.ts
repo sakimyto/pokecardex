@@ -1,11 +1,12 @@
 import { desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
-import { db } from '~/db/index.ts'
 import { arbitrageAlerts, priceStats } from '~/db/schema.ts'
+import type { AppEnv } from '~/types.ts'
 
-const pricesApi = new Hono()
+const pricesApi = new Hono<AppEnv>()
 
 pricesApi.get('/stats/:cardId', async (c) => {
+  const db = c.var.db
   const cardId = c.req.param('cardId')
   const stats = await db
     .select()
@@ -16,6 +17,7 @@ pricesApi.get('/stats/:cardId', async (c) => {
 })
 
 pricesApi.get('/arbitrage', async (c) => {
+  const db = c.var.db
   const alerts = await db
     .select()
     .from(arbitrageAlerts)
